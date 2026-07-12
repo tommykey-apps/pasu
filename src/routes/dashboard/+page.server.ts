@@ -1,5 +1,6 @@
-import { error, redirect } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { authenticatorName } from '$lib/server/aaguid';
+import { deleteCredential } from '$lib/server/credentials';
 import { deleteSession, SESSION_COOKIE } from '$lib/server/session';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -25,6 +26,31 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 };
 
 export const actions: Actions = {
+	delete: async ({ request, locals, platform }) => {
+		if (!locals.user) redirect(303, '/');
+		if (!platform) error(500, 'Cloudflare platform binding is not available');
+
+		const form = await request.formData();
+		const credentialId = form.get('credentialId');
+		if (typeof credentialId !== 'string' || credentialId === '') {
+			return fail(400, { message: '削除対象が指定されていません' });
+		}
+
+		const result = await deleteCredential(platform.env.DB, locals.user.id, credentialId);
+		if (result === 'not_found') {
+			return fail(400, { message: 'この passkey は存在しないか、あなたのものではありません' });
+		}
+		if (result === 'last_credential') {
+			return fail(400, {
+				message: '最後の1本は削除できません。消すと二度とログインできなくなります'
+			});
+		}
+		return {
+			message:
+				'サーバーから削除しました。端末のパスワードマネージャーには残っているので、不要ならそちらからも削除してください'
+		};
+	},
+
 	logout: async ({ cookies, platform }) => {
 		if (!platform) error(500, 'Cloudflare platform binding is not available');
 
