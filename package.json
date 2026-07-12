@@ -1,8 +1,16 @@
 {
 	"name": "pasu",
 	"private": true,
+	"pnpm": {
+		"onlyBuiltDependencies": [
+			"esbuild",
+			"sharp",
+			"workerd"
+		]
+	},
 	"version": "0.0.1",
 	"type": "module",
+	"packageManager": "pnpm@10.33.2",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "wrangler types --check && vite build",
@@ -14,7 +22,7 @@
 		"format": "prettier --write .",
 		"gen": "wrangler types",
 		"test:unit": "vitest",
-		"test": "npm run test:unit -- --run && npm run test:e2e",
+		"test": "pnpm run test:unit --run && pnpm run test:e2e",
 		"test:e2e": "playwright install && playwright test"
 	},
 	"devDependencies": {
