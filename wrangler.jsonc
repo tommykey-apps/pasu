@@ -14,8 +14,7 @@
 		{
 			"binding": "DB",
 			"database_name": "pasu",
-			// wrangler d1 create pasu の出力で置き換えるまでのプレースホルダ(ローカル開発はこの値を参照しない)
-			"database_id": "00000000-0000-0000-0000-000000000000",
+			"database_id": "f3c0e812-aaa5-4575-a6ab-df63dce70350",
 			"migrations_dir": "migrations"
 		}
 	]
