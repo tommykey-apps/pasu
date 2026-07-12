@@ -22,9 +22,10 @@ export default defineConfig({
 					name: 'server',
 					environment: 'node',
 					include: ['src/**/*.{test,spec}.{js,ts}'],
-					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
+					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}', 'src/**/*.d1.{test,spec}.ts']
 				}
-			}
+			},
+			'./vitest.workers.config.ts'
 		]
 	}
 });
