@@ -3,7 +3,10 @@
 	"compilerOptions": {
 		"rewriteRelativeImportExtensions": true,
 		"allowJs": true,
-		"checkJs": true,
+		// true(scaffold 既定)だと worker-configuration.d.ts の mainModule 型が import する
+		// ビルド後の .svelte-kit/cloudflare/_worker.js 以下の生成 JS まで診断されて check が壊れる。
+		// import 経由で入るファイルに tsconfig の exclude は効かない(sveltejs/language-tools#1048)
+		"checkJs": false,
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
 		"resolveJsonModule": true,
