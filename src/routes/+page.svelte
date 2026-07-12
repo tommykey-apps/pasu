@@ -1,11 +1,18 @@
 <script lang="ts">
-	import { startRegistration } from '@simplewebauthn/browser';
-	import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/browser';
+	import { goto } from '$app/navigation';
+	import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
+	import type {
+		PublicKeyCredentialCreationOptionsJSON,
+		PublicKeyCredentialRequestOptionsJSON
+	} from '@simplewebauthn/browser';
+	import type { PageProps } from './$types';
 
 	interface RegisteredResult {
 		user: { id: string; name: string };
 		credential: { id: string; aaguid: string; transports: string[]; counter: number };
 	}
+
+	let { data }: PageProps = $props();
 
 	let name = $state('');
 	let busy = $state(false);
@@ -46,12 +53,34 @@
 			busy = false;
 		}
 	}
+
+	async function login() {
+		busy = true;
+		errorMessage = null;
+		try {
+			const optionsJSON = await postJson<PublicKeyCredentialRequestOptionsJSON>(
+				'/api/login/options',
+				{}
+			);
+			const authentication = await startAuthentication({ optionsJSON });
+			await postJson('/api/login/verify', authentication);
+			await goto('/dashboard', { invalidateAll: true });
+		} catch (e) {
+			errorMessage = e instanceof Error ? e.message : String(e);
+		} finally {
+			busy = false;
+		}
+	}
 </script>
 
 <h1>pasu</h1>
 <p>passkey(WebAuthn)の学習用サンプルアプリ。</p>
 
-{#if result}
+{#if data.user}
+	<p>
+		<a href="/dashboard"><strong>{data.user.name}</strong> さんとしてログイン中 → ダッシュボード</a>
+	</p>
+{:else if result}
 	<section>
 		<h2>登録できました 🎉</h2>
 		<p>サーバーの D1 には次の情報だけが保存されています(秘密鍵は端末から出ません):</p>
@@ -69,20 +98,33 @@
 			<dt>署名カウンター</dt>
 			<dd>{result.credential.counter}</dd>
 		</dl>
+		<p><button type="button" onclick={login} disabled={busy}>この passkey でログイン</button></p>
 	</section>
 {:else}
-	<form onsubmit={register}>
-		<label>
-			ユーザー名(表示用のラベルです)
-			<input name="name" bind:value={name} maxlength="64" required disabled={busy} />
-		</label>
-		<button type="submit" disabled={busy}>
-			{busy ? '登録中…' : 'パスキーを登録'}
+	<section>
+		<h2>ログイン</h2>
+		<p>登録済みなら、ユーザー名の入力は要りません。</p>
+		<button type="button" onclick={login} disabled={busy}>
+			{busy ? '処理中…' : 'パスキーでログイン'}
 		</button>
-	</form>
-	{#if errorMessage}
-		<p class="error">{errorMessage}</p>
-	{/if}
+	</section>
+
+	<section>
+		<h2>はじめての方(登録)</h2>
+		<form onsubmit={register}>
+			<label>
+				ユーザー名(表示用のラベルです)
+				<input name="name" bind:value={name} maxlength="64" required disabled={busy} />
+			</label>
+			<button type="submit" disabled={busy}>
+				{busy ? '処理中…' : 'パスキーを登録'}
+			</button>
+		</form>
+	</section>
+{/if}
+
+{#if errorMessage}
+	<p class="error">{errorMessage}</p>
 {/if}
 
 <style>
