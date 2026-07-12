@@ -1,3 +1,7 @@
+// 【読み方】WebAuthn の各セレモニーは「options 発行 → ブラウザで署名 → verify」の
+// 2往復で、その間 challenge をサーバー側で覚えておく必要がある(リプレイ攻撃防止の要)。
+// このファイルはその保存(create)と使い捨ての取り出し(consume)だけを担当する
+
 const TTL_MS = 5 * 60 * 1000;
 
 export type ChallengeKind = 'registration' | 'authentication';

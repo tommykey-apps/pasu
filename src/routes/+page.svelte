@@ -1,4 +1,7 @@
 <script lang="ts">
+	// 【読み方】セレモニーのブラウザ側。register()/login() とも
+	// 「options を取得 → startRegistration()/startAuthentication()(OS の生体認証ダイアログ)
+	// → 結果を verify に送る」の3ステップで、サーバー側の 2 エンドポイントと対になっている
 	import { goto } from '$app/navigation';
 	import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
 	import type {

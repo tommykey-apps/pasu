@@ -1,3 +1,7 @@
+// 【読み方】ここから先は WebAuthn とは無関係の、ただのセッション管理。
+// 認証セレモニー成功(login/verify)の後にユーザーをログイン状態に保つ仕組みで、
+// パスワード認証だったとしても同じコードになる
+
 const TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 export const SESSION_COOKIE = 'session';

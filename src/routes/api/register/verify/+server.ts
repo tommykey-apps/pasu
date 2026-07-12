@@ -1,3 +1,7 @@
+// 【読み方】登録セレモニー後半(2/2)。認証器が作った公開鍵と署名を検証し、
+// 通ったら user と credential を保存する。サーバーが受け取るのは公開鍵だけで、
+// 秘密鍵はユーザーの端末(パスワードマネージャー)から出ない
+
 import { verifyRegistrationResponse } from '@simplewebauthn/server';
 import { isoBase64URL } from '@simplewebauthn/server/helpers';
 import type { RegistrationResponseJSON } from '@simplewebauthn/server';

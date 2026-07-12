@@ -1,3 +1,7 @@
+// 【読み方】認証(ログイン)セレモニー前半(1/2)。challenge 入りオプションを発行する。
+// ユーザー名レスなので誰がログインするかはまだ分からない。
+// 続きはブラウザの startAuthentication()(+page.svelte)→ login/verify へ
+
 import { generateAuthenticationOptions } from '@simplewebauthn/server';
 import { error, json } from '@sveltejs/kit';
 import { createChallenge } from '$lib/server/challenge';

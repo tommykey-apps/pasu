@@ -1,3 +1,5 @@
+// 【読み方】passkey 削除のビジネスルール。WebAuthn のセレモニーは登場しない
+
 export type DeleteCredentialResult = 'deleted' | 'last_credential' | 'not_found';
 
 // 「最後の1本を消すと二度とログインできない」ため、削除のガードは

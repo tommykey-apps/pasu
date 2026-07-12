@@ -1,3 +1,6 @@
+// 【読み方】全リクエストの入口。session cookie を検証して locals.user に載せる。
+// 各ページ/エンドポイントは locals.user を見るだけでログイン状態が分かる
+
 import type { Handle } from '@sveltejs/kit';
 import { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, validateSession } from '$lib/server/session';
 

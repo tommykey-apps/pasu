@@ -1,3 +1,7 @@
+// 【読み方】認証セレモニー後半(2/2)。飛んできた credential ID からユーザーを逆引きし、
+// 保存済みの公開鍵で署名を検証する。通ったら counter を更新してセッションを発行する。
+// ここまでが WebAuthn で、セッション以降はただの Web アプリ
+
 import { verifyAuthenticationResponse } from '@simplewebauthn/server';
 import { isoBase64URL } from '@simplewebauthn/server/helpers';
 import type {

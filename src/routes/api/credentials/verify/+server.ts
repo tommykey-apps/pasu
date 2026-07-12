@@ -1,3 +1,6 @@
+// 【読み方】passkey 追加セレモニーの後半。register/verify と同じ検証をするが、
+// user は既に存在するので credential の INSERT だけを行う
+
 import { verifyRegistrationResponse } from '@simplewebauthn/server';
 import { isoBase64URL } from '@simplewebauthn/server/helpers';
 import type { RegistrationResponseJSON } from '@simplewebauthn/server';

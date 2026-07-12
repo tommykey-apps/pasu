@@ -1,3 +1,7 @@
+// 【読み方】ログイン済みユーザーが「2本目以降の passkey」を追加する登録セレモニー前半。
+// 初回登録(register/options)との違いは、user.id が既存ユーザーのものである点と、
+// excludeCredentials で登録済み認証器を弾く点だけ
+
 import { generateRegistrationOptions } from '@simplewebauthn/server';
 import { isoBase64URL } from '@simplewebauthn/server/helpers';
 import type { AuthenticatorTransportFuture } from '@simplewebauthn/server';

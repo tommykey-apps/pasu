@@ -1,3 +1,7 @@
+// 【読み方】登録セレモニー前半(1/2)。ユーザー名を受け取り、challenge 入りの
+// オプションを発行して D1 に challenge を保存する。この時点では user はまだ作らない。
+// 続きはブラウザの startRegistration()(+page.svelte)→ register/verify へ
+
 import { generateRegistrationOptions } from '@simplewebauthn/server';
 import { error, json } from '@sveltejs/kit';
 import { createChallenge } from '$lib/server/challenge';
