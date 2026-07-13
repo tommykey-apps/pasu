@@ -1,0 +1,17 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"name": "pasu-cleanup",
+	"compatibility_date": "2026-07-12",
+	"main": "index.ts",
+	"triggers": {
+		// 毎日 18:00 UTC = 3:00 JST
+		"crons": ["0 18 * * *"]
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "pasu",
+			"database_id": "f3c0e812-aaa5-4575-a6ab-df63dce70350"
+		}
+	]
+}

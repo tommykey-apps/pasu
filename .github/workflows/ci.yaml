@@ -46,3 +46,4 @@ jobs:
       - run: pnpm wrangler d1 migrations apply pasu --remote
       - run: pnpm build
       - run: pnpm wrangler deploy
+      - run: pnpm wrangler deploy --config workers/cleanup/wrangler.jsonc
