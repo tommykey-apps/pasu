@@ -86,16 +86,4 @@ const verification = await verifyAuthenticationResponse({
 const sessionId = await createSession(db, row.user_id); // 自前。ここから先はただの Web アプリ
 ```
 
-## 関数の出どころ一覧
-
-| 関数                                                            | 出どころ                                             | 中でやっていること                                                                            |
-| --------------------------------------------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `startRegistration` / `startAuthentication`                     | ライブラリ(@simplewebauthn/browser)                  | ブラウザ標準 API `navigator.credentials.create()/get()` の薄いラッパー(JSON⇔バイナリ変換だけ) |
-| `generateRegistrationOptions` / `generateAuthenticationOptions` | ライブラリ(@simplewebauthn/server)                   | 乱数 challenge の生成と、仕様どおりのオプション組み立て                                       |
-| `verifyRegistrationResponse` / `verifyAuthenticationResponse`   | ライブラリ(@simplewebauthn/server)                   | 本丸。challenge/origin/RP ID の照合 → counter 検査 → 保存済み公開鍵での署名検証(WebCrypto)    |
-| `postJson`                                                      | 自前                                                 | ただの fetch ラッパー                                                                         |
-| `createChallenge` / `consumeChallenge`                          | 自前(`src/lib/server/challenge.ts`)                  | challenge の INSERT と、取り出し=破棄(`DELETE ... RETURNING`)                                 |
-| `createSession` / `validateSession`                             | 自前(`src/lib/server/session.ts`)                    | セッション ID 発行、cookie 照合、30日スライディング延長                                       |
-| `deleteCredential` / `cleanup`                                  | 自前(`src/lib/server/credentials.ts` / `cleanup.ts`) | 最後の1本の削除ガード、90日未使用データの Cron 掃除                                           |
-
 境界線: **「正しいか判定する」= ライブラリ**(バイナリのパースと署名検証。自作すると事故る領域)、**「何を覚えて何を消すか」= 自前**(challenge・公開鍵・counter・セッションの保存と破棄。このリポジトリで読むべき部分)。
