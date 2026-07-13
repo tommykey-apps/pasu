@@ -2,31 +2,11 @@
 
 passkey(WebAuthn)の学習用サンプルアプリ。デモ: https://pasu.tommykey0925.workers.dev
 
-登録もログインも同じ3手順:「① ブラウザが仲介 → ② サーバーが challenge 発行 → ③ サーバーが検証」。passkey 固有のコードは実質この6箇所だけ。
+登録もログインも同じ3手順:「① サーバーが challenge を発行 → ② 認証器が challenge に署名 → ③ サーバーが署名を検証」。passkey 固有のコードは実質この6箇所だけ。
 
-## ① ブラウザが仲介する
+## ① サーバーが challenge を発行する
 
-`src/routes/+page.svelte`。options をもらい、ブラウザ API(Face ID 等が出る)を呼び、結果を verify に送る。
-
-登録:
-
-```ts
-const optionsJSON = await postJson('/api/register/options', { name }); // 自前(fetch ラッパー)
-const registration = await startRegistration({ optionsJSON }); // ライブラリ。Face ID はブラウザ/OS が出す
-result = await postJson('/api/register/verify', registration);
-```
-
-ログイン(ユーザー名を送らないことに注目):
-
-```ts
-const optionsJSON = await postJson('/api/login/options', {});
-const authentication = await startAuthentication({ optionsJSON }); // ライブラリ。passkey 選択+Face ID
-await postJson('/api/login/verify', authentication);
-```
-
-## ② サーバーが challenge を発行する
-
-使い捨ての乱数 challenge を作って D1 に保存し、オプションに入れて返す。
+使い捨ての乱数 challenge を作って D1 に保存し、オプションに入れて返す。後で「この署名は今回の挑戦への応答か」を照合するため。
 
 登録 — `src/routes/api/register/options/+server.ts`:
 
@@ -50,7 +30,29 @@ const options = await generateAuthenticationOptions({ rpID, userVerification: 'p
 await createChallenge(db, { challenge: options.challenge, kind: 'authentication' }); // 自前
 ```
 
-## ③ サーバーが検証する
+## ② 認証器が challenge に署名する
+
+やりたいことは「秘密鍵を持つ認証器(Apple Passwords 等)に、challenge への署名を作らせる」。ただしサーバーや Web ページから認証器に直接触る手段はなく、必ずブラウザの API を経由する。ブラウザは Face ID の表示、ドメインに紐づく鍵の隔離、「実際に署名された場所(origin)」の記録までを担う。
+
+`src/routes/+page.svelte`(登録):
+
+```ts
+const optionsJSON = await postJson('/api/register/options', { name }); // 自前(fetch ラッパー)
+const registration = await startRegistration({ optionsJSON }); // ライブラリ。中身はブラウザ標準 API。ここで鍵ペア作成+署名
+result = await postJson('/api/register/verify', registration);
+```
+
+ログイン(ユーザー名を送らないことに注目):
+
+```ts
+const optionsJSON = await postJson('/api/login/options', {});
+const authentication = await startAuthentication({ optionsJSON }); // ライブラリ。passkey 選択+Face ID+署名
+await postJson('/api/login/verify', authentication);
+```
+
+登録では鍵ペアの新規作成もここで行われ、サーバーに返るのは公開鍵と署名だけ。秘密鍵は端末から出ない。
+
+## ③ サーバーが署名を検証する
 
 challenge を取り出して(=同時に破棄して)署名を検証し、結果を D1 に保存する。
 
