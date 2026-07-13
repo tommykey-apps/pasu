@@ -2,6 +2,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { startRegistration } from '@simplewebauthn/browser';
 	import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/browser';
+	import { webauthnErrorMessage } from '$lib/webauthn-error';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -44,11 +45,7 @@
 			await postJson('/api/credentials/verify', registration);
 			await invalidateAll();
 		} catch (e) {
-			if (e instanceof Error && e.name === 'InvalidStateError') {
-				addError = 'この認証器は既に登録済みです。別の端末やパスワードマネージャーでお試しください';
-			} else {
-				addError = e instanceof Error ? e.message : String(e);
-			}
+			addError = webauthnErrorMessage(e);
 		} finally {
 			busy = false;
 		}

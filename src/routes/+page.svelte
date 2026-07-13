@@ -8,6 +8,7 @@
 		PublicKeyCredentialCreationOptionsJSON,
 		PublicKeyCredentialRequestOptionsJSON
 	} from '@simplewebauthn/browser';
+	import { isPasskeySupported, webauthnErrorMessage } from '$lib/webauthn-error';
 	import type { PageProps } from './$types';
 
 	interface RegisteredResult {
@@ -21,6 +22,12 @@
 	let busy = $state(false);
 	let errorMessage = $state<string | null>(null);
 	let result = $state<RegisteredResult | null>(null);
+	// SSR 段階では判定できないので true 始まりにして、対応ブラウザで
+	// 「非対応」表示が一瞬ちらつくのを避ける。判定はマウント後に行う
+	let supported = $state(true);
+	$effect(() => {
+		supported = isPasskeySupported();
+	});
 
 	async function postJson<T>(path: string, body: unknown): Promise<T> {
 		const res = await fetch(path, {
@@ -51,7 +58,7 @@
 			const registration = await startRegistration({ optionsJSON });
 			result = await postJson<RegisteredResult>('/api/register/verify', registration);
 		} catch (e) {
-			errorMessage = e instanceof Error ? e.message : String(e);
+			errorMessage = webauthnErrorMessage(e);
 		} finally {
 			busy = false;
 		}
@@ -69,7 +76,7 @@
 			await postJson('/api/login/verify', authentication);
 			await goto('/dashboard', { invalidateAll: true });
 		} catch (e) {
-			errorMessage = e instanceof Error ? e.message : String(e);
+			errorMessage = webauthnErrorMessage(e);
 		} finally {
 			busy = false;
 		}
@@ -78,8 +85,17 @@
 
 <h1>pasu</h1>
 <p>passkey(WebAuthn)の学習用サンプルアプリ。</p>
+<p class="notice">
+	これはデモです。作成された passkey はお使いの端末のパスワードマネージャー(iCloud
+	キーチェーン、Google
+	パスワードマネージャー等)に保存され、不要になったらそちらから手動で削除できます。サーバー側のデータは予告なく削除されることがあります。
+</p>
 
-{#if data.user}
+{#if !supported}
+	<p class="error">
+		このブラウザはパスキーに対応していません。Safari、Chrome、Edge などの最新版でお試しください。
+	</p>
+{:else if data.user}
 	<p>
 		<a href="/dashboard"><strong>{data.user.name}</strong> さんとしてログイン中 → ダッシュボード</a>
 	</p>
@@ -140,6 +156,13 @@
 
 	.error {
 		color: #b00020;
+	}
+
+	.notice {
+		color: #666;
+		font-size: 0.9rem;
+		border-left: 3px solid #ccc;
+		padding-left: 0.75rem;
 	}
 
 	dd {
