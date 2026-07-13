@@ -6,6 +6,20 @@ passkey(WebAuthn)の学習用サンプルアプリ。
 - Cloudflare Workers + D1
 - SimpleWebAuthn(登録・認証セレモニーの実装に使用)
 
+## 用語の予習
+
+パスワードは「あなたとサーバーが同じ秘密を共有する」仕組みで、サーバーが漏れると秘密ごと漏れる。**WebAuthn** はこれをやめて「秘密鍵で署名し、公開鍵で検証する」仕組みに変えた W3C 標準。秘密鍵は端末から出ないので、サーバーが漏れても盗むものがない。
+
+- **passkey(パスキー)** — WebAuthn の credential に「デバイス間で同期できる」などの使い勝手を足した呼び名。技術的な中身は WebAuthn
+- **セレモニー(ceremony)** — WebAuthn 仕様の用語で、単に「決まった手順の一連のやりとり」のこと。**登録**(鍵ペアを作って公開鍵をサーバーに預ける)と**認証**(challenge に署名してログインする)の2種類しかなく、どちらも「① サーバーがオプション発行 → ② ブラウザが認証器で署名 → ③ サーバーが検証」の2往復
+- **認証器(authenticator)** — 秘密鍵を保管して署名する主体。iCloud キーチェーン、Google パスワードマネージャー、YubiKey などの物理キーもこれ
+- **challenge** — サーバーが毎回発行する使い捨ての乱数。これに署名させることで、通信を盗み見た攻撃者が同じ署名を再送しても無効になる(リプレイ防止)
+- **credential** — 登録で作られる鍵ペアとその付随情報。**credential ID** は認証器が発行する識別子で、サーバーはこれでユーザーを逆引きできる
+- **RP(Relying Party)** — 認証を「頼る側」、つまりこのアプリのこと。**RP ID** はそのドメイン名で、署名に焼き込まれるため偽サイトでは署名が成立しない(フィッシング耐性)
+- **counter** — 署名のたびに増える数。増えない・戻る場合は認証器の複製を疑うシグナル
+- **AAGUID** — 認証器の機種を表す ID。「Apple Passwords」のような表示名の解決に使う
+- **discoverable credential** — 認証器側が「このサイトの鍵はこれ」と自力で見つけられる形式の credential。サーバーにユーザー名を先に伝えなくてよくなり、ユーザー名レスログインが可能になる
+
 ## 何をしているか
 
 WebAuthn のセレモニーはどれも「① サーバーが challenge 入りオプションを発行 → ② ブラウザが認証器(Face ID 等)で署名 → ③ サーバーが検証して保存」の2往復。challenge は D1 に保存し、5分期限・一度使ったら破棄(リプレイ防止)。
@@ -72,5 +86,5 @@ pnpm wrangler deploy
 ```bash
 pnpm test:unit   # Vitest
 pnpm test:e2e    # Playwright(Chromium + WebAuthn Virtual Authenticator)
-pnpm check       # svelte-check + wrangler types --check
+pnpm check       # wrangler types(型の再生成)+ svelte-check
 ```
