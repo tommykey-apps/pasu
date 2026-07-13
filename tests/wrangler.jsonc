@@ -1,0 +1,15 @@
+{
+	// ユニットテスト専用の Wrangler 設定。ルートの wrangler.jsonc は main が
+	// ビルド成果物を指しており、ビルド前の CI ではテストプールが解決できないため、
+	// D1 バインディングだけの main なし構成を別に持つ
+	"name": "pasu-tests",
+	"compatibility_date": "2026-07-12",
+	"compatibility_flags": ["nodejs_als"],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "pasu",
+			"database_id": "00000000-0000-0000-0000-000000000000"
+		}
+	]
+}
