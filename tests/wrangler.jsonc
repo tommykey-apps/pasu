@@ -1,5 +1,5 @@
 {
-	// ユニットテスト専用の Wrangler 設定。ルートの wrangler.jsonc は main が
+	// ユニットテスト専用の Wrangler 設定。ルートの wrangler.dev.jsonc は main が
 	// ビルド成果物を指しており、ビルド前の CI ではテストプールが解決できないため、
 	// D1 バインディングだけの main なし構成を別に持つ
 	"name": "pasu-tests",

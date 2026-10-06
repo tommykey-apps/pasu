@@ -1,4 +1,8 @@
 {
+	// 開発・E2E 専用の Wrangler 設定。デプロイ設定は cloudflare.config.ts が持つ。
+	// vite dev のバインディング(getPlatformProxy)と adapter-cloudflare、wrangler dev は
+	// cloudflare.config.ts を読めないため残している。Wrangler が自動で探さない名前にして、
+	// workers/cleanup で親の設定を拾う不具合(workers-sdk#16002)を避ける
 	"$schema": "./node_modules/wrangler/config-schema.json",
 	"name": "pasu",
 	"compatibility_date": "2026-07-12",
