@@ -43,7 +43,13 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # マイグレーション適用 → デプロイの順を固定し、新コードが旧スキーマを踏まないようにする
-      - run: pnpm wrangler d1 migrations apply pasu --remote
-      - run: pnpm build
-      - run: pnpm wrangler deploy
-      - run: pnpm wrangler deploy --config workers/cleanup/wrangler.jsonc
+      # cf の D1 コマンドはデータベース名ではなく ID を取る。--local を付けなければ本番に適用される
+      - run: pnpm cf d1 migrations apply f3c0e812-aaa5-4575-a6ab-df63dce70350
+      # cf build は SvelteKit を検出すると vite build だけを実行し、cf deploy が読む
+      # .cloudflare/output を作らない。Wrangler に書き出させてから --prebuilt で送る
+      - run: pnpm build && pnpm build:cf
+      - run: pnpm cf deploy --prebuilt
+      - run: pnpm install --frozen-lockfile
+        working-directory: workers/cleanup
+      - run: pnpm wrangler build --x-new-config --x-cf-build-output && pnpm cf deploy --prebuilt
+        working-directory: workers/cleanup
