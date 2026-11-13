@@ -34,7 +34,7 @@ passkey は公開鍵暗号でログインする仕組みです。登録時に端
 
 ### ① サーバーが challenge を発行する
 
-サーバーは毎回新しい challenge を作り、D1 に保存してから返します。保存するのは、③で届いた署名が今回の challenge に対するものかを確かめるためです。
+サーバーは毎回新しい challenge を作り、Cloudflare のデータベース D1 に保存してからブラウザに送ります。保存するのは、③で届いた署名が今回の challenge に対するものかを確かめるためです。
 
 `src/routes/api/register/options/+server.ts`:
 
@@ -59,24 +59,24 @@ return json(options);
 
 秘密鍵は認証器の中にあり、Web ページからは触れません。ページがブラウザに頼むと、ブラウザが Face ID などで本人確認をして認証器に署名させます。ブラウザは署名に「どのサイトで署名したか」(origin) を含めるので、偽サイトで作らせた署名は本物のサイトでは通りません。
 
-新規登録では、認証器がここで鍵ペアを新しく作ります。サーバーに返るのは公開鍵と署名だけです。
+新規登録では、認証器がここで鍵ペアを新しく作ります。ブラウザからサーバーに送られるのは公開鍵と署名だけで、秘密鍵は認証器から出ません。
 
 `src/routes/+page.svelte`:
 
 ```ts
 import { startRegistration } from '@simplewebauthn/browser';
-// postJson は同じファイル内で定義した fetch の包み
+// postJson はこのファイルで定義した関数。JSON を POST して応答を受け取る
 
 const optionsJSON = await postJson('/api/register/options', { name });
 const registration = await startRegistration({ optionsJSON });
 await postJson('/api/register/verify', registration);
 ```
 
-`startRegistration` は、ブラウザ標準の `navigator.credentials.create()` を呼ぶ薄い包みです。
+`startRegistration` は、ブラウザ標準の `navigator.credentials.create()` を呼び出しやすくした関数です。
 
 ### ③ サーバーが署名を検証して公開鍵を保存する
 
-サーバーは D1 から challenge を取り出すと同時に削除します。同じ challenge を二度使わせないためです。そのうえで署名を検証し、通ったらユーザーと公開鍵を保存します。
+サーバーは D1 から challenge を取り出すと同時に削除します。同じ challenge を二度使わせないためです。そのうえで署名を検証し、成功したらユーザーと公開鍵を D1 に保存します。
 
 `src/routes/api/register/verify/+server.ts`:
 
@@ -124,11 +124,11 @@ const authentication = await startAuthentication({ optionsJSON });
 await postJson('/api/login/verify', authentication);
 ```
 
-`startAuthentication` は、ブラウザ標準の `navigator.credentials.get()` を呼ぶ薄い包みです。
+`startAuthentication` は、ブラウザ標準の `navigator.credentials.get()` を呼び出しやすくした関数です。
 
 ### ③ サーバーが署名を検証してセッションを発行する
 
-届いた credential ID から保存済みの公開鍵を探し、その公開鍵で署名を検証します。通ればセッションを発行し、そこから先は普通の Cookie ログインと変わりません。
+ブラウザから送られてくる署名には、どの passkey で署名したかを示す credential ID が付いています。サーバーはこの ID を使い、新規登録で保存した公開鍵を D1 から探して署名を検証します。成功したらログイン状態を保つセッションを発行します。そこから先は、パスワードでログインしたあとの Web アプリと同じです。
 
 `src/routes/api/login/verify/+server.ts`:
 
