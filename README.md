@@ -28,13 +28,21 @@ passkey は公開鍵暗号でログインする仕組みです。登録時に端
 | 偽サイトに誘導されたら | 入力したパスワードを盗まれる | 署名が偽サイトの origin に結びつくので、本物のサイトでは通らない |
 | 使い回し | 他サイトの漏洩が波及する | サイトごとに別の鍵ペアを作る |
 
-## ① challenge を発行する
+## 新規登録
+
+コード例の先頭に import を載せています。`@simplewebauthn/` で始まるものがライブラリ、`$lib/` で始まるものがこのリポジトリのコードです。
+
+### ① サーバーが challenge を発行する
 
 サーバーは毎回新しい challenge を作り、D1 に保存してから返します。保存するのは、③で届いた署名が今回の challenge に対するものかを確かめるためです。
 
 `src/routes/api/register/options/+server.ts`:
 
 ```ts
+import { generateRegistrationOptions } from '@simplewebauthn/server';
+import { json } from '@sveltejs/kit';
+import { createChallenge } from '$lib/server/challenge';
+
 const options = await generateRegistrationOptions({
 	rpName,
 	rpID,
@@ -45,42 +53,37 @@ await createChallenge(db, { challenge: options.challenge, kind: 'registration' }
 return json(options);
 ```
 
-ログイン側 (`src/routes/api/login/options/+server.ts`) はユーザー名を受け取りません。どの passkey を使うかは、ブラウザが利用者に選ばせます。
-
-```ts
-const options = await generateAuthenticationOptions({ rpID, userVerification: 'preferred' });
-await createChallenge(db, { challenge: options.challenge, kind: 'authentication' });
-```
-
-## ② 認証器が署名する
+### ② 認証器が鍵ペアを作って署名する
 
 認証器は、秘密鍵を保管し、本人確認をしてから署名を作る装置やソフトウェアです。Apple Passwords や Google Password Manager、YubiKey のようなセキュリティキーがこれにあたります。つまり認証用の器具です。
 
 秘密鍵は認証器の中にあり、Web ページからは触れません。ページがブラウザに頼むと、ブラウザが Face ID などで本人確認をして認証器に署名させます。ブラウザは署名に「どのサイトで署名したか」(origin) を含めるので、偽サイトで作らせた署名は本物のサイトでは通りません。
 
+新規登録では、認証器がここで鍵ペアを新しく作ります。サーバーに返るのは公開鍵と署名だけです。
+
 `src/routes/+page.svelte`:
 
 ```ts
-// 登録: ここで鍵ペアが作られ、公開鍵と署名だけが返る
+import { startRegistration } from '@simplewebauthn/browser';
+// postJson は同じファイル内で定義した fetch の包み
+
 const optionsJSON = await postJson('/api/register/options', { name });
 const registration = await startRegistration({ optionsJSON });
 await postJson('/api/register/verify', registration);
-
-// ログイン
-const optionsJSON = await postJson('/api/login/options', {});
-const authentication = await startAuthentication({ optionsJSON });
-await postJson('/api/login/verify', authentication);
 ```
 
-`startRegistration` と `startAuthentication` は、ブラウザ標準の `navigator.credentials` を呼ぶ薄い包みです。
+`startRegistration` は、ブラウザ標準の `navigator.credentials.create()` を呼ぶ薄い包みです。
 
-## ③ 署名を検証する
+### ③ サーバーが署名を検証して公開鍵を保存する
 
-サーバーは D1 から challenge を取り出すと同時に削除します。同じ challenge を二度使わせないためです。そのうえで署名を検証します。
+サーバーは D1 から challenge を取り出すと同時に削除します。同じ challenge を二度使わせないためです。そのうえで署名を検証し、通ったらユーザーと公開鍵を保存します。
 
-登録 (`src/routes/api/register/verify/+server.ts`) は、検証が通ったらユーザーと公開鍵を保存します。
+`src/routes/api/register/verify/+server.ts`:
 
 ```ts
+import { verifyRegistrationResponse } from '@simplewebauthn/server';
+import { consumeChallenge } from '$lib/server/challenge';
+
 const challenge = await consumeChallenge(db, challengeId, 'registration');
 const verification = await verifyRegistrationResponse({
 	response: body,
@@ -91,9 +94,50 @@ const verification = await verifyRegistrationResponse({
 await db.batch([/* users と credentials に INSERT */]);
 ```
 
-ログイン (`src/routes/api/login/verify/+server.ts`) は、届いた credential ID から保存済みの公開鍵を探して検証します。通ればセッションを発行し、そこから先は普通の Cookie ログインと変わりません。
+## ログイン
+
+### ① サーバーが challenge を発行する
+
+新規登録と同じく challenge を作って保存します。ユーザー名は受け取りません。どの passkey を使うかは、ブラウザが利用者に選ばせます。
+
+`src/routes/api/login/options/+server.ts`:
 
 ```ts
+import { generateAuthenticationOptions } from '@simplewebauthn/server';
+import { createChallenge } from '$lib/server/challenge';
+
+const options = await generateAuthenticationOptions({ rpID, userVerification: 'preferred' });
+await createChallenge(db, { challenge: options.challenge, kind: 'authentication' });
+```
+
+### ② 認証器が署名する
+
+鍵ペアは作らず、新規登録で作った秘密鍵で署名します。
+
+`src/routes/+page.svelte`:
+
+```ts
+import { startAuthentication } from '@simplewebauthn/browser';
+
+const optionsJSON = await postJson('/api/login/options', {});
+const authentication = await startAuthentication({ optionsJSON });
+await postJson('/api/login/verify', authentication);
+```
+
+`startAuthentication` は、ブラウザ標準の `navigator.credentials.get()` を呼ぶ薄い包みです。
+
+### ③ サーバーが署名を検証してセッションを発行する
+
+届いた credential ID から保存済みの公開鍵を探し、その公開鍵で署名を検証します。通ればセッションを発行し、そこから先は普通の Cookie ログインと変わりません。
+
+`src/routes/api/login/verify/+server.ts`:
+
+```ts
+import { verifyAuthenticationResponse } from '@simplewebauthn/server';
+import { consumeChallenge } from '$lib/server/challenge';
+import { createSession } from '$lib/server/session';
+
+const challenge = await consumeChallenge(db, challengeId, 'authentication');
 const row = await db
 	.prepare('SELECT ... FROM credentials c JOIN users u ON u.id = c.user_id WHERE c.id = ?1')
 	.bind(body.id)
