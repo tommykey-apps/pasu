@@ -1,91 +1,99 @@
 # pasu
 
-passkey(WebAuthn)の学習用サンプルアプリ。デモ: https://pasu.tommykey0925.workers.dev
+passkey の仕組みを学ぶためのサンプルアプリ。デモ: https://pasu.tommykey0925.workers.dev
 
-登録もログインも同じ3手順:「① サーバーが challenge を発行 → ② 認証器が challenge に署名 → ③ サーバーが署名を検証」。passkey 固有のコードは実質この6箇所だけ。
+## 仕組み
 
-## ① サーバーが challenge を発行する
+passkey は公開鍵暗号でログインする仕組みだ。登録時に端末で鍵ペアを作り、サーバーには公開鍵だけを渡す。ログイン時は、サーバーが送った乱数 (challenge) に端末が秘密鍵で署名し、サーバーが公開鍵でその署名を確かめる。サーバーに置くのは公開鍵だけなので、漏れても成りすましには使えない。
 
-使い捨ての乱数 challenge を作って D1 に保存し、オプションに入れて返す。後で「この署名は今回の挑戦への応答か」を照合するため。
+```
+サーバー                    ブラウザ                  認証器 (端末)
+  │                           │                          │
+  │ ① challenge を発行 ──────▶│                          │
+  │                           │ ② 署名を依頼 ───────────▶│ Face ID などで本人確認
+  │                           │◀─────────────────── 署名 │
+  │◀──────────── 署名を送る   │                          │
+  │ ③ 署名を検証              │                          │
+```
 
-登録 — `src/routes/api/register/options/+server.ts`:
+登録もログインもこの3手順で進む。登録では②で鍵ペアを新しく作り、③で公開鍵を保存する。ログインでは保存済みの公開鍵で③の検証をする。
+
+## ① challenge を発行する
+
+サーバーは毎回新しい challenge を作り、D1 に保存してから返す。保存するのは、③で届いた署名が今回の challenge に対するものかを確かめるためだ。
+
+`src/routes/api/register/options/+server.ts`:
 
 ```ts
 const options = await generateRegistrationOptions({
-	// ライブラリ(乱数 challenge 生成+オプション組み立て)
 	rpName,
 	rpID,
 	userName: name,
 	authenticatorSelection: { residentKey: 'required', userVerification: 'preferred' }
 });
-await createChallenge(db, { challenge: options.challenge, kind: 'registration' }); // 自前(INSERT)
+await createChallenge(db, { challenge: options.challenge, kind: 'registration' });
 return json(options);
 ```
 
-ログイン — `src/routes/api/login/options/+server.ts`:
+ログイン側 (`src/routes/api/login/options/+server.ts`) はユーザー名を受け取らない。どの passkey を使うかは、ブラウザが利用者に選ばせる。
 
 ```ts
-// allowCredentials を渡さない = どの passkey を使うかはブラウザ/OS が選ぶ
-const options = await generateAuthenticationOptions({ rpID, userVerification: 'preferred' }); // ライブラリ
-await createChallenge(db, { challenge: options.challenge, kind: 'authentication' }); // 自前
+const options = await generateAuthenticationOptions({ rpID, userVerification: 'preferred' });
+await createChallenge(db, { challenge: options.challenge, kind: 'authentication' });
 ```
 
-## ② 認証器が challenge に署名する
+## ② 認証器が署名する
 
-やりたいことは「秘密鍵を持つ認証器(Apple Passwords 等)に、challenge への署名を作らせる」。ただしサーバーや Web ページから認証器に直接触る手段はなく、必ずブラウザの API を経由する。ブラウザは Face ID の表示、ドメインに紐づく鍵の隔離、「実際に署名された場所(origin)」の記録までを担う。
+秘密鍵は認証器 (Apple Passwords や Google Password Manager など) の中にあり、Web ページからは触れない。ページがブラウザに頼むと、ブラウザが Face ID などで本人確認をして認証器に署名させる。ブラウザは署名に「どのサイトで署名したか」(origin) を含めるので、偽サイトで作らせた署名は本物のサイトで通らない。
 
-`src/routes/+page.svelte`(登録):
-
-```ts
-const optionsJSON = await postJson('/api/register/options', { name }); // 自前(fetch ラッパー)
-const registration = await startRegistration({ optionsJSON }); // ライブラリ。中身はブラウザ標準 API。ここで鍵ペア作成+署名
-result = await postJson('/api/register/verify', registration);
-```
-
-ログイン(ユーザー名を送らないことに注目):
+`src/routes/+page.svelte`:
 
 ```ts
+// 登録: ここで鍵ペアが作られ、公開鍵と署名だけが返る
+const optionsJSON = await postJson('/api/register/options', { name });
+const registration = await startRegistration({ optionsJSON });
+await postJson('/api/register/verify', registration);
+
+// ログイン
 const optionsJSON = await postJson('/api/login/options', {});
-const authentication = await startAuthentication({ optionsJSON }); // ライブラリ。passkey 選択+Face ID+署名
+const authentication = await startAuthentication({ optionsJSON });
 await postJson('/api/login/verify', authentication);
 ```
 
-登録では鍵ペアの新規作成もここで行われ、サーバーに返るのは公開鍵と署名だけ。秘密鍵は端末から出ない。
+`startRegistration` と `startAuthentication` は、ブラウザ標準の `navigator.credentials` を呼ぶ薄い包みだ。
 
-## ③ サーバーが署名を検証する
+## ③ 署名を検証する
 
-challenge を取り出して(=同時に破棄して)署名を検証し、結果を D1 に保存する。
+サーバーは D1 から challenge を取り出すと同時に削除する。同じ challenge を二度使わせないためだ。そのうえで署名を検証する。
 
-登録 — `src/routes/api/register/verify/+server.ts`。通ったら公開鍵を保存:
+登録 (`src/routes/api/register/verify/+server.ts`) は、検証が通ったらユーザーと公開鍵を保存する。
 
 ```ts
-const challenge = await consumeChallenge(db, challengeId, 'registration'); // 自前(DELETE...RETURNING で使い捨て)
+const challenge = await consumeChallenge(db, challengeId, 'registration');
 const verification = await verifyRegistrationResponse({
-	// ライブラリ(署名検証の本丸)
 	response: body,
 	expectedChallenge: challenge.challenge,
 	expectedOrigin: origin,
 	expectedRPID: rpID
 });
-await db.batch([...]); // 自前(users と credentials=公開鍵 を INSERT)
+await db.batch([/* users と credentials に INSERT */]);
 ```
 
-ログイン — `src/routes/api/login/verify/+server.ts`。credential ID からユーザーを逆引きし、保存済み公開鍵で検証してセッション発行:
+ログイン (`src/routes/api/login/verify/+server.ts`) は、届いた credential ID から保存済みの公開鍵を探して検証する。通ればセッションを発行し、そこから先は普通の Cookie ログインと変わらない。
 
 ```ts
-const row = await db // 自前(credential ID からユーザーを逆引き)
+const row = await db
 	.prepare('SELECT ... FROM credentials c JOIN users u ON u.id = c.user_id WHERE c.id = ?1')
 	.bind(body.id)
 	.first();
 const verification = await verifyAuthenticationResponse({
-	// ライブラリ(署名検証の本丸)
 	response: body,
 	expectedChallenge: challenge.challenge,
 	expectedOrigin: origin,
 	expectedRPID: rpID,
-	credential: { id: row.id, publicKey, counter: row.counter } // D1 に保存してあった公開鍵
+	credential: { id: row.id, publicKey, counter: row.counter }
 });
-const sessionId = await createSession(db, row.user_id); // 自前。ここから先はただの Web アプリ
+const sessionId = await createSession(db, row.user_id);
 ```
 
-境界線: **「正しいか判定する」= ライブラリ**(バイナリのパースと署名検証。自作すると事故る領域)、**「何を覚えて何を消すか」= 自前**(challenge・公開鍵・counter・セッションの保存と破棄。このリポジトリで読むべき部分)。
+署名の解析と検証は `@simplewebauthn/server` に任せている。このリポジトリで読むべきなのは、challenge・公開鍵・セッションをいつ保存し、いつ消すかの部分だ。
