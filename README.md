@@ -18,6 +18,23 @@ passkey は公開鍵暗号でログインする仕組みです。登録時に端
 
 登録もログインもこの3手順で進みます。登録では②で鍵ペアを新しく作り、③で公開鍵を保存します。ログインでは保存済みの公開鍵で③の検証をします。
 
+## WebAuthn と FIDO の違い
+
+どちらも passkey を動かすための規格の名前です。決めた団体と、どこの通信を決めているかが違います。
+
+```
+Web ページ ──(WebAuthn)──▶ ブラウザ / OS ──(CTAP)──▶ 認証器
+```
+
+| 名前 | 決めた団体 | 決めている範囲 |
+|---|---|---|
+| Web Authentication (WebAuthn) | World Wide Web Consortium (W3C) | Web ページがブラウザに登録やログインを頼む JS の API (`navigator.credentials`) |
+| Client to Authenticator Protocol (CTAP) | FIDO Alliance | ブラウザや OS が USB・NFC・Bluetooth などで認証器とやりとりする手順 |
+| FIDO2 | FIDO Alliance | WebAuthn と CTAP を合わせた呼び名 |
+| passkey | FIDO Alliance と Apple・Google・Microsoft | FIDO2 の鍵のうち、ユーザー名を入れずに使えるもの (discoverable credential) の呼び名。多くは端末間で同期される |
+
+Fast IDentity Online (FIDO) Alliance は、パスワードに頼らない認証の規格を作る業界団体です。このアプリが直接使うのは WebAuthn だけで、CTAP はブラウザと OS が受け持ちます。
+
 ## パスワード方式との違い
 
 | | パスワード | passkey |
