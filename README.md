@@ -1,6 +1,4 @@
-# pasu
-
-passkey の仕組みを学ぶためのサンプルアプリです。デモ: https://pasu.tommykey0925.workers.dev
+## passkey の仕組みを学ぶためのサンプルアプリです。デモ: https://pasu.tommykey0925.workers.dev
 
 ## passkey ってなーにーー？
 
