@@ -58,6 +58,15 @@ importers:
         specifier: 4.147.0
         version: 4.147.0
 
+  workers/cleanup:
+    devDependencies:
+      cf:
+        specifier: 1.0.0-beta.12
+        version: 1.0.0-beta.12
+      wrangler:
+        specifier: 4.147.0
+        version: 4.147.0
+
 packages:
 
   '@cloudflare/build-output-utils@0.8.5':

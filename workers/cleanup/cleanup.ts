@@ -1,5 +1,4 @@
-// 【読み方】公開デモゆえに溜まる放置データの掃除。Cron 専用 Worker
-// (workers/cleanup)から呼ばれ、SvelteKit アプリからは使われない
+// 【読み方】公開デモゆえに溜まる放置データの掃除。この Worker の index.ts から呼ばれる
 
 const RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
 

@@ -10,6 +10,12 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
+			typescript: {
+				// Cron 用 Worker は SvelteKit の外にあり、生成される tsconfig の対象に入らないため足す
+				config: (config) => {
+					config.include.push('../workers/**/*.ts');
+				}
+			},
 			adapter: adapter({
 				config: 'wrangler.dev.jsonc',
 				platformProxy: { configPath: 'wrangler.dev.jsonc' }
