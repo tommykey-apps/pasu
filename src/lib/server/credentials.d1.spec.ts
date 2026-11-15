@@ -49,4 +49,13 @@ describe('deleteCredential', () => {
 	it('存在しない credential ID は not_found になること', async () => {
 		expect(await deleteCredential(env.DB, 'user-1', 'no-such-id')).toBe('not_found');
 	});
+
+	it('2本を同時に削除しても、どちらか1本は残ること', async () => {
+		const results = await Promise.all([
+			deleteCredential(env.DB, 'user-1', 'cred-1a'),
+			deleteCredential(env.DB, 'user-1', 'cred-1b')
+		]);
+		expect(results.sort()).toEqual(['deleted', 'last_credential']);
+		expect(await credentialIds('user-1')).toHaveLength(1);
+	});
 });
