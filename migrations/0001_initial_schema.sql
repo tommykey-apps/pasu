@@ -1,5 +1,4 @@
--- Migration number: 0002 	 2026-07-12
-DROP TABLE healthcheck;
+-- Migration number: 0001 	 2026-11-16
 
 -- id は WebAuthn の user.id(サーバー発行のランダム値、base64url)。
 -- name はただの表示ラベルであり、ユーザーの識別には使わないため UNIQUE にしない
@@ -33,3 +32,12 @@ CREATE TABLE challenges (
 	user_name TEXT,
 	expires_at INTEGER NOT NULL
 );
+
+-- id はセッション ID そのものではなく SHA-256 の値。cookie に載せる元の ID は保存しない
+CREATE TABLE sessions (
+	id TEXT PRIMARY KEY,
+	user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	expires_at INTEGER NOT NULL
+);
+
+CREATE INDEX sessions_user_id ON sessions (user_id);
