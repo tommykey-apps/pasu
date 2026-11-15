@@ -1,10 +1,10 @@
 import { env } from 'cloudflare:test';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createSession, deleteSession, validateSession } from './session';
+import { createSession, deleteSession, hashSessionId, validateSession } from './session';
 
 async function getExpiresAt(id: string): Promise<number | null> {
 	const row = await env.DB.prepare('SELECT expires_at FROM sessions WHERE id = ?1')
-		.bind(id)
+		.bind(await hashSessionId(id))
 		.first<{ expires_at: number }>();
 	return row?.expires_at ?? null;
 }
@@ -25,7 +25,9 @@ describe('validateSession', () => {
 	it('検証のたびに有効期限が延長されること(スライディング)', async () => {
 		const id = await createSession(env.DB, 'user-1');
 		const soon = Date.now() + 1000;
-		await env.DB.prepare('UPDATE sessions SET expires_at = ?2 WHERE id = ?1').bind(id, soon).run();
+		await env.DB.prepare('UPDATE sessions SET expires_at = ?2 WHERE id = ?1')
+			.bind(await hashSessionId(id), soon)
+			.run();
 
 		expect(await validateSession(env.DB, id)).not.toBeNull();
 
@@ -36,7 +38,7 @@ describe('validateSession', () => {
 	it('期限切れのセッションは拒否され、行も削除されること', async () => {
 		const id = await createSession(env.DB, 'user-1');
 		await env.DB.prepare('UPDATE sessions SET expires_at = ?2 WHERE id = ?1')
-			.bind(id, Date.now() - 1)
+			.bind(await hashSessionId(id), Date.now() - 1)
 			.run();
 
 		expect(await validateSession(env.DB, id)).toBeNull();
@@ -47,5 +49,14 @@ describe('validateSession', () => {
 		const id = await createSession(env.DB, 'user-1');
 		await deleteSession(env.DB, id);
 		expect(await validateSession(env.DB, id)).toBeNull();
+	});
+
+	it('DB にはセッション ID そのものではなくハッシュ値が保存されること', async () => {
+		const id = await createSession(env.DB, 'user-1');
+		const raw = await env.DB.prepare('SELECT 1 AS found FROM sessions WHERE id = ?1')
+			.bind(id)
+			.first();
+		expect(raw).toBeNull();
+		expect(await getExpiresAt(id)).not.toBeNull();
 	});
 });

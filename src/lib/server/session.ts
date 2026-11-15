@@ -12,13 +12,20 @@ export interface SessionUser {
 	name: string;
 }
 
+// DB にはセッション ID そのものではなく SHA-256 の値を保存する。
+// D1 の中身が漏れても、cookie に載せる元の ID は分からない
+export async function hashSessionId(id: string): Promise<string> {
+	const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(id));
+	return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 export async function createSession(db: D1Database, userId: string): Promise<string> {
 	// セッション ID は推測不能であることが唯一の要件なので、128bit の乱数で足りる
 	const bytes = crypto.getRandomValues(new Uint8Array(16));
 	const id = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 	await db
 		.prepare('INSERT INTO sessions (id, user_id, expires_at) VALUES (?1, ?2, ?3)')
-		.bind(id, userId, Date.now() + TTL_MS)
+		.bind(await hashSessionId(id), userId, Date.now() + TTL_MS)
 		.run();
 	return id;
 }
@@ -26,26 +33,30 @@ export async function createSession(db: D1Database, userId: string): Promise<str
 // 検証のたびに期限を延長する(スライディング方式)。
 // 毎リクエスト UPDATE が走るが、デモの規模では最適化より単純さを優先する
 export async function validateSession(db: D1Database, id: string): Promise<SessionUser | null> {
+	const hash = await hashSessionId(id);
 	const row = await db
 		.prepare(
 			'SELECT s.expires_at, u.id AS user_id, u.name FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.id = ?1'
 		)
-		.bind(id)
+		.bind(hash)
 		.first<{ expires_at: number; user_id: string; name: string }>();
 	if (!row) return null;
 
 	if (row.expires_at <= Date.now()) {
-		await deleteSession(db, id);
+		await db.prepare('DELETE FROM sessions WHERE id = ?1').bind(hash).run();
 		return null;
 	}
 
 	await db
 		.prepare('UPDATE sessions SET expires_at = ?2 WHERE id = ?1')
-		.bind(id, Date.now() + TTL_MS)
+		.bind(hash, Date.now() + TTL_MS)
 		.run();
 	return { id: row.user_id, name: row.name };
 }
 
 export async function deleteSession(db: D1Database, id: string): Promise<void> {
-	await db.prepare('DELETE FROM sessions WHERE id = ?1').bind(id).run();
+	await db
+		.prepare('DELETE FROM sessions WHERE id = ?1')
+		.bind(await hashSessionId(id))
+		.run();
 }

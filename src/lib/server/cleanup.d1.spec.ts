@@ -45,7 +45,7 @@ describe('cleanup', () => {
 		await env.DB.prepare(
 			"INSERT INTO sessions (id, user_id, expires_at) VALUES ('s1', 'stale', ?1)"
 		)
-			.bind(NOW + DAY_MS)
+			.bind(NOW - DAY_MS)
 			.run();
 
 		const result = await cleanup(env.DB, NOW);
@@ -79,6 +79,21 @@ describe('cleanup', () => {
 		await cleanup(env.DB, NOW);
 
 		expect(await userIds()).toEqual(['fresh']);
+	});
+
+	it('ログインが90日より前でも、有効なセッションがあるユーザーは残ること', async () => {
+		await insertUser('session-only');
+		await insertCredential('cred-session', 'session-only', NOW - 200 * DAY_MS, NOW - 91 * DAY_MS);
+		await env.DB.prepare(
+			"INSERT INTO sessions (id, user_id, expires_at) VALUES ('s2', 'session-only', ?1)"
+		)
+			.bind(NOW + DAY_MS)
+			.run();
+
+		const result = await cleanup(env.DB, NOW);
+
+		expect(result.staleUsers).toBe(0);
+		expect(await userIds()).toEqual(['session-only']);
 	});
 
 	it('期限切れの challenge だけが削除されること', async () => {
