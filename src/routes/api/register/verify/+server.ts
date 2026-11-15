@@ -64,13 +64,5 @@ export const POST: RequestHandler = async ({ request, url, cookies, platform }) 
 			)
 	]);
 
-	return json({
-		user: { id: challenge.user_id, name: challenge.user_name },
-		credential: {
-			id: credential.id,
-			aaguid,
-			transports: credential.transports ?? [],
-			counter: credential.counter
-		}
-	});
+	return json({ user: { name: challenge.user_name } });
 };

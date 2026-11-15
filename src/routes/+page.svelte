@@ -12,8 +12,7 @@
 	import type { PageProps } from './$types';
 
 	interface RegisteredResult {
-		user: { id: string; name: string };
-		credential: { id: string; aaguid: string; transports: string[]; counter: number };
+		user: { name: string };
 	}
 
 	let { data }: PageProps = $props();
@@ -101,22 +100,8 @@
 	</p>
 {:else if result}
 	<section>
-		<h2>登録できました 🎉</h2>
-		<p>サーバーの D1 には次の情報だけが保存されています(秘密鍵は端末から出ません):</p>
-		<dl>
-			<dt>ユーザー名</dt>
-			<dd>{result.user.name}</dd>
-			<dt>user.id(サーバー発行のランダム識別子)</dt>
-			<dd><code>{result.user.id}</code></dd>
-			<dt>credential ID(認証器発行)</dt>
-			<dd><code>{result.credential.id}</code></dd>
-			<dt>AAGUID(認証器の種類)</dt>
-			<dd><code>{result.credential.aaguid}</code></dd>
-			<dt>transports</dt>
-			<dd><code>{result.credential.transports.join(', ') || '(なし)'}</code></dd>
-			<dt>署名カウンター</dt>
-			<dd>{result.credential.counter}</dd>
-		</dl>
+		<h2>登録できました</h2>
+		<p><strong>{result.user.name}</strong> さんの passkey を登録しました。</p>
 		<p><button type="button" onclick={login} disabled={busy}>この passkey でログイン</button></p>
 	</section>
 {:else}
@@ -163,9 +148,5 @@
 		font-size: 0.9rem;
 		border-left: 3px solid #ccc;
 		padding-left: 0.75rem;
-	}
-
-	dd {
-		overflow-wrap: anywhere;
 	}
 </style>

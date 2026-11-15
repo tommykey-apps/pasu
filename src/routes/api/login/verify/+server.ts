@@ -74,5 +74,5 @@ export const POST: RequestHandler = async ({ request, url, cookies, platform }) 
 	const sessionId = await createSession(db, row.user_id);
 	cookies.set(SESSION_COOKIE, sessionId, { path: '/', maxAge: SESSION_MAX_AGE_SECONDS });
 
-	return json({ user: { id: row.user_id, name: row.name } });
+	return json({ user: { name: row.name } });
 };

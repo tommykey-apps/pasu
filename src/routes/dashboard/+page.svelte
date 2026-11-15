@@ -69,8 +69,6 @@
 		<li>
 			<strong>{credential.authenticator}</strong>
 			<dl>
-				<dt>credential ID</dt>
-				<dd><code>{credential.id}</code></dd>
 				<dt>作成日時</dt>
 				<dd>{dateFormat.format(credential.createdAt)}</dd>
 				<dt>最終使用日時</dt>
@@ -104,10 +102,6 @@
 <style>
 	li {
 		margin-bottom: 1rem;
-	}
-
-	dd {
-		overflow-wrap: anywhere;
 	}
 
 	.notice {
