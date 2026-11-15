@@ -1,12 +1,14 @@
 # 新規登録とログインの実装
 
-## 新規登録
+README の「ユーザ新規登録時」「ログイン時」の手順ごとに、対応するコードを載せています。
 
 コード例の先頭に import を載せています。`@simplewebauthn/` で始まるものがライブラリ、`$lib/` で始まるものがこのリポジトリのコードです。
 
-### ① サーバーが challenge を発行する
+## ユーザ新規登録時
 
-サーバーは毎回新しい challenge を作り、Cloudflare のデータベース D1 に保存してからブラウザに送ります。保存するのは、③で届いた署名が今回の challenge に対するものかを確かめるためです。
+### 1. PC, スマホ本体で公開鍵と秘密鍵のペアを作る
+
+README では省いていますが、新規登録でもサーバが先に一時的な乱数 (challenge) を作ってブラウザに渡します。サーバはこの乱数を Cloudflare のデータベース D1 に保存しておき、2. で届いた公開鍵が今回の登録で作られたものかを確かめます。
 
 `src/routes/api/register/options/+server.ts`:
 
@@ -25,13 +27,9 @@ await createChallenge(db, { challenge: options.challenge, kind: 'registration' }
 return json(options);
 ```
 
-### ② 認証器が鍵ペアを作って署名する
+ブラウザは JS で PC, スマホ本体の機能を呼び出し、鍵ペアを作らせます。この機能を持つものを認証器と呼びます。Apple Passwords や Google Password Manager、YubiKey のようなセキュリティキーがこれにあたります。
 
-認証器は、秘密鍵を保管し、本人確認をしてから署名を作る装置やソフトウェアです。Apple Passwords や Google Password Manager、YubiKey のようなセキュリティキーがこれにあたります。つまり認証用の器具です。
-
-秘密鍵は認証器の中にあり、Web ページからは触れません。ページがブラウザに頼むと、ブラウザが Face ID などで本人確認をして認証器に署名させます。ブラウザは署名に「どのサイトで署名したか」(origin) を含めるので、偽サイトで作らせた署名は本物のサイトでは通りません。
-
-新規登録では、認証器がここで鍵ペアを新しく作ります。ブラウザからサーバーに送られるのは公開鍵と署名だけで、秘密鍵は認証器から出ません。
+秘密鍵は認証器の中にあり、Web ページからは触れません。PC, スマホ本体は Face ID などで本人確認をしてから鍵ペアを作り、公開鍵に署名を付けて返します。署名には「どのサイトで作ったか」(origin) が含まれるので、偽サイトで作らせたものは本物のサイトでは通りません。
 
 `src/routes/+page.svelte`:
 
@@ -46,9 +44,9 @@ await postJson('/api/register/verify', registration);
 
 `startRegistration` は、ブラウザ標準の `navigator.credentials.create()` を呼び出しやすくした関数です。
 
-### ③ サーバーが署名を検証して公開鍵を保存する
+### 2. 公開鍵をサーバに渡して保存する
 
-サーバーは D1 から challenge を取り出すと同時に削除します。同じ challenge を二度使わせないためです。そのうえで署名を検証し、成功したらユーザーと公開鍵を D1 に保存します。
+サーバは D1 から乱数を取り出すと同時に削除します。同じ乱数を二度使わせないためです。そのうえで署名を検証し、成功したらユーザと公開鍵を紐付けて D1 に保存します。秘密鍵はサーバに渡りません。
 
 `src/routes/api/register/verify/+server.ts`:
 
@@ -66,11 +64,11 @@ const verification = await verifyRegistrationResponse({
 await db.batch([/* users と credentials に INSERT */]);
 ```
 
-## ログイン
+## ログイン時
 
-### ① サーバーが challenge を発行する
+### 1. サーバが一時的な乱数を生成してブラウザに渡す
 
-新規登録と同じく challenge を作って保存します。ユーザー名は受け取りません。どの passkey を使うかは、ブラウザが利用者に選ばせます。
+サーバは乱数 (challenge) を作り、D1 に保存してからブラウザに渡します。ユーザ名は受け取りません。どの passkey を使うかは、ブラウザが利用者に選ばせます。
 
 `src/routes/api/login/options/+server.ts`:
 
@@ -82,7 +80,7 @@ const options = await generateAuthenticationOptions({ rpID, userVerification: 'p
 await createChallenge(db, { challenge: options.challenge, kind: 'authentication' });
 ```
 
-### ② 認証器が署名する
+### 2. PC, スマホ本体にその乱数と秘密鍵で署名を作らせる
 
 鍵ペアは作らず、新規登録で作った秘密鍵で署名します。
 
@@ -98,9 +96,11 @@ await postJson('/api/login/verify', authentication);
 
 `startAuthentication` は、ブラウザ標準の `navigator.credentials.get()` を呼び出しやすくした関数です。
 
-### ③ サーバーが署名を検証してセッションを発行する
+### 3. サーバが公開鍵で署名を検証する
 
-ブラウザから送られてくる署名には、どの passkey で署名したかを示す credential ID が付いています。サーバーはこの ID を使い、新規登録で保存した公開鍵を D1 から探して署名を検証します。成功したらログイン状態を保つセッションを発行します。そこから先は、パスワードでログインしたあとの Web アプリと同じです。
+ブラウザから送られてくる署名には、どの passkey で署名したかを示す credential ID が付いています。サーバはこの ID で、新規登録で保存した公開鍵を D1 から探して署名を検証します。乱数は新規登録と同じく、取り出すと同時に削除します。
+
+成功したらログイン状態を保つセッションを発行します。そこから先は、パスワードでログインしたあとの Web アプリと同じです。
 
 `src/routes/api/login/verify/+server.ts`:
 
@@ -124,4 +124,4 @@ const verification = await verifyAuthenticationResponse({
 const sessionId = await createSession(db, row.user_id);
 ```
 
-署名の解析と検証は `@simplewebauthn/server` に任せています。このリポジトリで読むべきなのは、challenge・公開鍵・セッションをいつ保存し、いつ消すかの部分です。
+署名の解析と検証は `@simplewebauthn/server` に任せています。このリポジトリで読むべきなのは、乱数・公開鍵・セッションをいつ保存し、いつ消すかの部分です。
