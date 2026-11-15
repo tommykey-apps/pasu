@@ -32,4 +32,4 @@ passkey はパスワードを使わず公開鍵でログインする仕組みで
 
 関連する規格と団体は [WebAuthn と FIDO の違い](docs/webauthn-and-fido.md) にまとめています。
 
-新規登録とログインのコードは [新規登録とログインの実装](docs/implementation.md) で説明しています。
+新規登録とログインのコードは [新規登録とログインの実装](docs/registration-and-login.md) で説明しています。

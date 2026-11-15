@@ -7,7 +7,7 @@ import { isoBase64URL } from '@simplewebauthn/server/helpers';
 import type { RegistrationResponseJSON } from '@simplewebauthn/server';
 import { error, json } from '@sveltejs/kit';
 import { consumeChallenge } from '$lib/server/challenge';
-import { rpFromUrl } from '$lib/server/rp';
+import { rpFromUrl } from '$lib/server/relying-party';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, url, cookies, platform }) => {

@@ -5,7 +5,7 @@
 import { generateAuthenticationOptions } from '@simplewebauthn/server';
 import { error, json } from '@sveltejs/kit';
 import { createChallenge } from '$lib/server/challenge';
-import { rpFromUrl } from '$lib/server/rp';
+import { rpFromUrl } from '$lib/server/relying-party';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ url, cookies, platform }) => {

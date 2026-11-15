@@ -1,7 +1,7 @@
 // 【読み方】Cron Trigger 専用の小さな Worker。公式の adapter-cloudflare は
 // fetch ハンドラしかエクスポートできないため(sveltejs/kit#4841)、
 // scheduled はアプリ本体と別 Worker にして同じ D1 に接続している
-import { cleanup } from '../../src/lib/server/cleanup';
+import { cleanup } from './cleanup';
 
 export default {
 	async scheduled(_controller: ScheduledController, env: Env): Promise<void> {

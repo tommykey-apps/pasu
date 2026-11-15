@@ -2,7 +2,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { startRegistration } from '@simplewebauthn/browser';
 	import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/browser';
-	import { webauthnErrorMessage } from '$lib/webauthn-error';
+	import { webauthnErrorMessage } from '$lib/webauthn-browser';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -38,11 +38,11 @@
 		addError = null;
 		try {
 			const optionsJSON = await postJson<PublicKeyCredentialCreationOptionsJSON>(
-				'/api/credentials/options',
+				'/api/passkeys/options',
 				{}
 			);
 			const registration = await startRegistration({ optionsJSON });
-			await postJson('/api/credentials/verify', registration);
+			await postJson('/api/passkeys/verify', registration);
 			await invalidateAll();
 		} catch (e) {
 			addError = webauthnErrorMessage(e);
@@ -56,7 +56,7 @@
 	}
 </script>
 
-<h1>ダッシュボード</h1>
+<h1>passkey の管理</h1>
 <p><strong>{data.user.name}</strong> さんとしてログイン中です。</p>
 
 {#if form?.message}

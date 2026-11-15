@@ -49,7 +49,6 @@ jobs:
       # .cloudflare/output を作らない。Wrangler に書き出させてから --prebuilt で送る
       - run: pnpm build && pnpm build:cf
       - run: pnpm cf deploy --prebuilt
-      - run: pnpm install --frozen-lockfile
-        working-directory: workers/cleanup
-      - run: pnpm wrangler build --x-new-config --x-cf-build-output && pnpm cf deploy --prebuilt
-        working-directory: workers/cleanup
+      # Cron 用 Worker は pnpm ワークスペースの別パッケージ。依存はルートのロックファイルで入る
+      - run: pnpm --filter pasu-cleanup exec wrangler build --x-new-config --x-cf-build-output
+      - run: pnpm --filter pasu-cleanup exec cf deploy --prebuilt
