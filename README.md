@@ -12,7 +12,7 @@ passkey はパスワードを使わず公開鍵でログインする仕組みで
 1. サーバが一時的な乱数を生成してブラウザに渡します
 2. ブラウザはPC, スマホ本体ににその乱数と秘密鍵で署名というものを作らせます。署名は２つあり、r,sと呼ばれます。署名r,sをサーバに返します
 3. サーバは公開鍵とrを使って計算し、計算結果とsが一致したら認証成功です
-4. こういう、検証するために生成される一時的な乱数をchallengeと言います。passkeyとは全く関係ないですが、HTTPSのTLS証明自動更新の仕組みでもchallengeを使います
+4. こういう、検証するために生成される一時的な乱数をchallengeと言います。passkeyとは全く関係ないですが、HTTPSのTLS証明自動更新の仕組みでもchallengeを使います ([Automatic Certificate Management Environment (ACME) の仕様 RFC 8555 の challenge の節](https://datatracker.ietf.org/doc/html/rfc8555#section-8))
 ```
 サーバー                    ブラウザ                  認証器 (端末)
   │                           │                          │
