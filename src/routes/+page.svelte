@@ -8,7 +8,7 @@
 		PublicKeyCredentialCreationOptionsJSON,
 		PublicKeyCredentialRequestOptionsJSON
 	} from '@simplewebauthn/browser';
-	import { isPasskeySupported, webauthnErrorMessage } from '$lib/webauthn-error';
+	import { isPasskeySupported, webauthnErrorMessage } from '$lib/webauthn-browser';
 	import type { PageProps } from './$types';
 
 	interface RegisteredResult {
@@ -73,7 +73,7 @@
 			);
 			const authentication = await startAuthentication({ optionsJSON });
 			await postJson('/api/login/verify', authentication);
-			await goto('/dashboard', { invalidateAll: true });
+			await goto('/passkeys', { invalidateAll: true });
 		} catch (e) {
 			errorMessage = webauthnErrorMessage(e);
 		} finally {
@@ -96,7 +96,7 @@
 	</p>
 {:else if data.user}
 	<p>
-		<a href="/dashboard"><strong>{data.user.name}</strong> さんとしてログイン中 → ダッシュボード</a>
+		<a href="/passkeys"><strong>{data.user.name}</strong> さんとしてログイン中 → passkey の管理</a>
 	</p>
 {:else if result}
 	<section>

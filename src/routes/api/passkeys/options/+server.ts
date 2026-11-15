@@ -7,7 +7,7 @@ import { isoBase64URL } from '@simplewebauthn/server/helpers';
 import type { AuthenticatorTransportFuture } from '@simplewebauthn/server';
 import { error, json } from '@sveltejs/kit';
 import { createChallenge } from '$lib/server/challenge';
-import { rpFromUrl, rpName } from '$lib/server/rp';
+import { rpFromUrl, rpName } from '$lib/server/relying-party';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ url, cookies, locals, platform }) => {

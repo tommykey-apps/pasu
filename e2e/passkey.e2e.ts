@@ -41,7 +41,7 @@ test('登録 → ログアウト → ユーザー名レスログインの一連�
 	await registerUser(page, 'e2e-journey');
 
 	await page.getByRole('button', { name: 'この passkey でログイン' }).click();
-	await page.waitForURL('**/dashboard');
+	await page.waitForURL('**/passkeys');
 	await expect(page.getByText('e2e-journey さんとしてログイン中です')).toBeVisible();
 
 	await page.getByRole('button', { name: 'ログアウト' }).click();
@@ -49,7 +49,7 @@ test('登録 → ログアウト → ユーザー名レスログインの一連�
 
 	// ユーザー名を入力せずにログインできる
 	await page.getByRole('button', { name: 'パスキーでログイン' }).click();
-	await page.waitForURL('**/dashboard');
+	await page.waitForURL('**/passkeys');
 	await expect(page.getByText('e2e-journey さんとしてログイン中です')).toBeVisible();
 
 	// ログインで最終使用日時が記録される
@@ -60,7 +60,7 @@ test('2本目の追加 → 削除 → 最後の1本は削除できないこと',
 	const first = await addVirtualAuthenticator(page);
 	await registerUser(page, 'e2e-two-keys');
 	await page.getByRole('button', { name: 'この passkey でログイン' }).click();
-	await page.waitForURL('**/dashboard');
+	await page.waitForURL('**/passkeys');
 
 	// 1本だけの間は削除ボタンがなくガード文言が出る
 	await expect(page.getByText('最後の1本は削除できません')).toBeVisible();

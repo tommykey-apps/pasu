@@ -10,7 +10,7 @@ import type {
 } from '@simplewebauthn/server';
 import { error, json } from '@sveltejs/kit';
 import { consumeChallenge } from '$lib/server/challenge';
-import { rpFromUrl } from '$lib/server/rp';
+import { rpFromUrl } from '$lib/server/relying-party';
 import { createSession, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from '$lib/server/session';
 import type { RequestHandler } from './$types';
 
